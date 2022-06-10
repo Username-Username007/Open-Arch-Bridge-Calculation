@@ -64,11 +64,12 @@ def DL(x, l1, f, m):
     return DL_arch(x, l1, f, m) + DL_spandrel(x, l1, f, m)
 
 def DL_spandrel(x, l1, f, m):
-    gd = 139.695 # kN/m
+    gd = 139.695 * 0.01 # kN/m   # Don't be a free ride! If you really read the code carefully, you need to remove the " *0.01" because it's a trap.
+        # or even you'll have to change it if your bridge is not set like mine.
     if(isinstance(x, Iterable)):
         temp_func = lambda xx: gd + (y1_x(xx, l1, f, m) + d/2 - d/(2*np.cos(phi_x(xx, l1, f, m)) ) ) * 9 * 22.5 if(xx<l1-24) else 0
         return np.array(
-            [temp_func(xx) for xx in x ]
+            [temp_func(xx)*0.01 for xx in x ] # Don't be a free rider! Here you also need to remove the " *0.01 " or even change it.
         )
     else:
         if(x>l1-3*6):
