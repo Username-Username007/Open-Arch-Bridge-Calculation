@@ -1,6 +1,6 @@
 # %%
 import numpy as np
-from scipy import optimize, integrate
+from scipy import optimize, integrate, interpolate
 from collections.abc import Iterable
 # ***from collections import Iterable*** will be removed after Python 3.10
 # and this feature is induced since Python 3.3 .
@@ -45,7 +45,9 @@ import matplotlib.pyplot as plt
 def y1_x(x, l1, f, m):
     k = np.arccosh(m)
     return f/(m-1) * (np.cosh(k*x/l1) - 1)
-
+def dy1dx(x, l1, f, m):
+    k = np.arccosh(m)
+    return f*k/ (m-1)/l1 * np.sinh(k*x/l1)
 def phi_x(x, l1, f, m):
     k = np.arccosh(m)
     return np.arctan(f*k/ (m-1)/l1 * np.sinh(k*x/l1))
@@ -218,12 +220,17 @@ def filled_seg_func(x, y):
 
 
 filled_ode = integrate.solve_ivp(filled_seg_func, (0, l1-24), [0, 0], t_eval=np.r_[0:l1-24:IntegralStep])
-plt.plot(filled_ode.t, filled_ode.y[0], label="Rational Arch Axis 2")
-plt.plot(x, y1_x(x, l1, f, m), label="Arch Axis from 5P Method")
-plt.gca().invert_xaxis()
-plt.gca().invert_yaxis()
-plt.legend()
-plt.show()
+# plt.plot(filled_ode.t, filled_ode.y[0], label="Rational Arch Axis 2")
+# plt.plot(x, y1_x(x, l1, f, m), label="Arch Axis from 5P Method")
+# plt.gca().invert_xaxis()
+# plt.gca().invert_yaxis()
+# plt.legend()
+# plt.show()
+def open_seg_func(x, y):
+    ret = np.zeros(y.shape)
+    ret[0] = y[1]
+    ret[1] = 1/H_g*DL(x, l1, f, m)
+    return ret
 """# %%
 # open segment bvp
 # It turns out that this is not a bvp (boundary value problem)
@@ -286,3 +293,64 @@ plt.gca().invert_yaxis()
 plt.legend()
 plt.show()
 # %%
+
+# elastic center
+
+temp_func = lambda x: y1_x(x, l1, f, m)*np.sqrt(1+dy1dx(x, l1, f, m)**2)
+
+numerator = integrate.quad(temp_func, 0, l1)[0]
+temp_func = lambda x: np.sqrt(1+dy1dx(x, l1, f, m)**2)
+denominator = integrate.quad(temp_func, 0, l1)[0]
+
+y_s = numerator/denominator
+
+# %%
+RationalY_x = interpolate.interp1d(RationalX, RationalY, bounds_error=False, 
+    fill_value='extrapolate')
+
+dy_x = lambda x:(y1_x(x, l1, f, m) - RationalY_x(x))
+# secondary forces
+temp_func = lambda x: (y1_x(x, l1, f, m) - RationalY_x(x))*np.sqrt(1+dy1dx(x, l1, f, m)**2)
+
+numerator = integrate.quad(temp_func, 0, l1)[0]
+temp_func = lambda x: np.sqrt(1+dy1dx(x, l1, f, m)**2)
+denominator = integrate.quad(temp_func, 0, l1)[0]
+
+dX1 = -H_g * numerator/denominator
+
+
+temp_func = lambda x: dy_x(x)*\
+    (y_s - y1_x(x, l1, f, m) ) * np.sqrt(1+dy1dx(x, l1, f, m)**2)
+numerator = integrate.quad(temp_func, 0, l1)[0]
+
+temp_func = lambda x: (y_s-y1_x(x, l1, f, m))**2*np.sqrt(1+dy1dx(x, l1, f, m)**2)
+denominator = integrate.quad(temp_func, 0, l1)[0]
+dX2 = H_g * numerator/denominator
+
+# %%
+
+# deviation bending moment
+# y = ys - y1
+dM_x = lambda x: dX1 - dX2*(y_s - y1_x(x, l1, f, m)) + H_g*dy_x(x)
+
+x = np.r_[0:l1:0.1]
+plt.plot(x, dM_x(x))
+plt.axhline(c='k')
+plt.gca().invert_xaxis()
+plt.grid()
+plt.xlabel("x (m)")
+plt.ylabel("ΔM (kN*m)")
+plt.show()
+# %%
+
+# elastic compression
+
+
+# 不会
+
+
+# %%
+# Coder Note:
+# IntegrationWarning: The maximum number of subdivisions (50) has been achieved.
+# the reason for the above warning I think, is the discontinuity 
+# of the rational arch axis (I guess). I don't really know actually.
