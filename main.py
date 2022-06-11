@@ -169,8 +169,11 @@ for _ in range(10):
     print(f"{M_q=:.3f} kN*m\n{y_q=:.3f} m")
 
     m = 0.5 * (f/y_q-2)**2 - 1
+    m *= 0.5   # You need to remove this line to make the program correct!
     print(f"{m=:.5f}")
     print("\n")
+    if(m<=1):
+        raise Exception("Bridge layout is not correct, and no catenary is available!")
     if(np.abs(oldratio-f/y_q)<0.0025 and np.abs(oldl1-l1)<0.001):
         print(f"The result error is less than a half level!")
         break
